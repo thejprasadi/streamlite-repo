@@ -1,51 +1,104 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import streamlit as st
-from streamlit.logger import get_logger
+import time
+from dotenv import load_dotenv
+import os
+import openai
 
-LOGGER = get_logger(__name__)
+os.environ['OPENAI_API_KEY'] = st.secrets["OPENAI_API_KEY"]
 
-
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
+def get_completion(prompt,model="gpt-3.5-turbo"):
+    messages=[{"role":"user","content":prompt}]
+    response=openai.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=0
     )
-
-    st.write("# Welcome to Streamlit! 👋")
-
-    st.sidebar.success("Select a demo above.")
-
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
+    return response.choices[0].message.content
+  
+def perform_classification(context):
+    prompt=f"""
+    Your task is to classify the intent based on the user utterance,
+    For this Problem you can use the following,
+    Your task is to classify the intent based on the user utterance,
+    For this Problem you can use the following,
+    Example1 - user utterance : Make a payment,
+            intent : Make Payment
+    Example 2 -user utterance : I lost my card yesterday at the suppermarket,
+            intent : Lost My Card
+    Example 2 - user utterance : I want to connect twith the support center 
+            intent : Agent Transfer
+            '''{context}'' 
+            """
+    response=get_completion(prompt)
+    return response
+  
+def generate_summary(context):
+    prompt=f"""
+    Your task is to generate a short summary.Summarize with 15 words
+    ```{context}```
     """
-    )
+    response=get_completion(prompt)
+    return(response)
+
+st.set_page_config(page_title="Research Application" ,layout="wide", initial_sidebar_state="collapsed")
+
+st.title('Research Application')
+
+st.markdown("""
+<style>
+    /* Target the buttons inside the Streamlit app to expand to full width */
+    .stButton>button {
+        width: 100%;
+    }
+            
+    [data-testid="collapsedControl"] {
+        display: none
+    }
+    
+</style>
+""", unsafe_allow_html=True)
 
 
-if __name__ == "__main__":
-    run()
+col1, col2, col3 = st.columns([3, 1, 3])
+
+
+with col1:
+    user_input = st.text_area("Enter Text Here", height=300)
+
+with col2:
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
+    st.write("")
+    summary_btn = st.button("Summary", key="summary_btn")
+    classify_btn = st.button("Classify", key="classify_btn")
+
+
+def summarize(text):
+   return generate_summary(text)
+  
+    #return text
+
+def classify(text):
+    #return "Classified result"
+    
+    return perform_classification(text)
+
+with col3:
+
+    if summary_btn:
+      with st.spinner('Summarizing Text...'):
+        summary_result = summarize(user_input)
+        st.text_area("Summarized Output", value=summary_result, height=300, key='result')
+
+    elif classify_btn:
+      with st.spinner('Classifying Text...'):
+        classification_result = classify(user_input)
+        st.text_area("Classified Output", value=classification_result, height=300, key='result')
+
+    else:
+      st.text_area("Result", height=300, key='result')
